@@ -1,7 +1,9 @@
 # rk3308
-ALSA - alsa plugin
+alsa - alsa plugin
 
-I2S - i2s-tdm
+i2s - i2s-tdm
+
+dt - dt overlays
 
 logic.txt -зачем все это
 
