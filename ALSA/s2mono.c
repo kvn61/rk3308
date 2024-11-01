@@ -10,12 +10,18 @@
 static unsigned int sfmt[] = {	SND_PCM_FORMAT_S24_LE, \
 								/*SND_PCM_FORMAT_S32_LE,*/ \
 								SND_PCM_FORMAT_S24_3LE, \
-								/*SND_PCM_FORMAT_DSD_U32_LE,*/ \
+								SND_PCM_FORMAT_DSD_U32_LE, \
+							};
+static unsigned int ofmt[] = {	SND_PCM_FORMAT_S24_LE, \
+								/*SND_PCM_FORMAT_S32_LE,*/ \
+								/*SND_PCM_FORMAT_S24_3LE,*/ \
+								SND_PCM_FORMAT_DSD_U32_LE, \
 							};
 
 typedef struct {
 	snd_pcm_extplug_t ext;
 	int fdbg;			// debug flag
+	int f243;			// S24_3LE 
 	uint32_t lval;
 	uint32_t rval;
 	uint8_t tlval;
@@ -31,6 +37,8 @@ typedef struct {
 static int s2m_init(snd_pcm_extplug_t *ext)
 {
 //	s2m_t *s2m = (s2m_t *)ext;
+	
+	fprintf( stderr, "Init" );
 
 	return 0;
 }
@@ -123,10 +131,23 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	return size;
 }
 
+/*
+static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
+{
+	s2m_t *s2m = (s2m_t *)ext;
+	snd_pcm_t *pcm = s2m->ext.pcm;
+	int ret, hw_set = 0;
+
+	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
+			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
+}
+*/
+
 static const snd_pcm_extplug_callback_t s2m_callback = {
 	.transfer = s2m_transfer,
 	.init = s2m_init,
 	.close = s2m_close,
+//	.hw_params = s2m_hw,
 };
 
 #include "parm.h"
@@ -146,6 +167,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 
 	s2m->step = 0;
 	s2m->fdbg = 0;
+	s2m->f243 = 0;
 	s2m->lval = 0;
 	s2m->rval = 0;
 	s2m->tlval = 0;
@@ -170,6 +192,12 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 		err = get_bool_parm(n, id, "debug", &s2m->fdbg);
 		if (err)
 			goto ok;
+
+		err = get_bool_parm(n, id, "f243", &s2m->f243);
+		if (err) {
+			fprintf( stderr, "f243=0x%d\n", s2m->f243);
+			goto ok;
+		}
 
 		err = get_int_parm(n, id, "lval", &s2m->lval);
 		if (err) {
@@ -208,14 +236,28 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 		goto lerr;
 	}
 
+	// !!! !!! !!! required
 	snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_CHANNELS, 0);
-	snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 0);
-
 	snd_pcm_extplug_set_param(&s2m->ext, SND_PCM_EXTPLUG_HW_CHANNELS, 2);
-	snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_CHANNELS, 4);
-	snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
-//	snd_pcm_extplug_set_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S24);
-	snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S16);
+	snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_CHANNELS, 2);
+	// !!! !!! !!!
+
+	if( s2m->f243 ) {
+		snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 0);
+		snd_pcm_extplug_set_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S24_3LE);
+//		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
+		snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S24);
+//		snd_pcm_extplug_set_slave_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
+	} else {
+		snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 1);
+		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(ofmt), ofmt);
+	}
+
+//	snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
+//	snd_pcm_extplug_set_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_DSD_U32_LE);
+//	snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_DSD_U32_LE);
+//	snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S16);
+//	snd_pcm_extplug_set_slave_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(ofmt), ofmt);
 
 	*pcmp = s2m->ext.pcm;
 	return 0;
