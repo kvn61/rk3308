@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+&uart4 {
+// onboard wi-fi
+    status = "disabled";
+};
+
+&emmc {
+    status = "disabled";
+};

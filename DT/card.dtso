@@ -1,0 +1,65 @@
+/dts-v1/;
+/plugin/;
+
+
+&{/} {
+
+    mycodec: mycodec {
+	compatible = "my,mycodec";
+	#sound-dai-cells = <0>;
+	playback = <8>;
+	capture = <2>;
+	status = "okay";
+    };
+
+    i2s80:sound {
+	compatible = "simple-audio-card";
+	simple-audio-card,name = "i2s80";
+
+#if 1
+	    // DF
+	simple-audio-card,frame-inversion;
+	simple-audio-card,format = "left_j";
+#else
+	    //work only in 32 bit frame
+	    // 2 mono
+	simple-audio-card,format = "right_j";
+#endif
+
+//	simple-audio-card,format = "dsp_b";
+
+//	simple-audio-card,mclk-fs = <256>;
+
+        simple-audio-card,bitclock-master = <&card_master>;
+        simple-audio-card,frame-master = <&card_master>;
+
+        card_master: simple-audio-card,cpu {
+            sound-dai = <&i2s_8ch_0>;
+//            sound-dai = <&i2s_2ch_0>;
+
+	    // mclk output enable, move to i2s0
+//!!!	    clocks = <&cru SCLK_I2S0_8CH_TX_OUT>;
+//	    clocks = <&cru SCLK_I2S0_8CH_RX_OUT>;
+
+//		move to i2s0
+//	    // mclk external input enable
+//	    clocks = <&gen33m>;
+//	    clocks = <&mclk_i2s0_8ch_in>;
+//	    clocks = <&mclk_i2s0_2ch_in>;
+//	    system-clock-frequency = <24576000>;
+//		move to i2s0
+
+//	    dai-tdm-slot-num = <2>;
+//	    dai-tdm-slot-width = <32>;
+        };
+
+        simple-audio-card,codec {
+            sound-dai = <&mycodec>;
+
+//	    dai-tdm-slot-num = <1>;
+//	    dai-tdm-slot-width = <32>;
+//            clocks = <&osc>;
+        };
+    };
+};
+

@@ -1,0 +1,76 @@
+/dts-v1/;
+/plugin/;
+
+&emmc {
+	cap-mmc-highspeed;
+//	mmc-hs200-1_8v;
+	non-removable;
+	vmmc-supply = <&vcc_io>;
+	status = "okay";
+
+	no-sdio;
+	cap-sd-highspeed;
+};
+
+&sdio {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	non-removable;
+	no-mmc;
+//	sd-uhs-sdr104;
+
+// dwmmc_rockchip ff4a0000.mmc: card claims to support voltages below defined range
+// mmc0: error -110 whilst initialising MMC card
+	vmmc-supply = <&vcc_io>;
+	vqmmc-supply = <&vcc_1v8>;
+
+	status = "okay";
+
+	AP6212: wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PA0 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_host_wake>;
+	};
+};
+
+//&saradc {
+//	status = "disabled";
+//};
+
+
+
+&u2phy {
+	status = "disabled";
+	u2phy_host: host-port {
+		phy-supply = <&vcc5v0_sys>;
+		status = "disabled";
+	};
+	u2phy_otg: otg-port {
+		phy-supply = <&vcc5v0_sys>;
+		status = "disabled";
+	};
+};
+
+&usb20_otg {
+	status = "disabled";
+//	dr_mode = "peripheral";
+};
+
+&usb_host_ehci {
+	status = "disabled";
+};
+
+&usb_host_ohci {
+	status = "disabled";
+};
+
+
