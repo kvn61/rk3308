@@ -61,6 +61,7 @@ struct rk_i2s_tdm_dev {
 	bool is_master_mode;
 //+++
 	bool mclk_external;
+	bool s2mono;
 	unsigned int clk_f;
 	unsigned int clk_x;
 	unsigned int tx_x;
@@ -680,7 +681,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 			if (i2s_tdm->clk_f == 768) {
 				div_lrck = 24; i2s_tdm->frame_width = 24;
 			}
-			else if(params_format(params) == SNDRV_PCM_FORMAT_S16_LE) {
+			else if( i2s_tdm->s2mono) {
 				div_lrck = 32; i2s_tdm->frame_width = 32;
 			} else {
 				div_lrck = 64; i2s_tdm->frame_width = 64;
@@ -726,6 +727,12 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 		div_lrck = bclk_rate / params_rate(params);
 	}
 
+	if( i2s_tdm->s2mono ) {
+		val |= I2S_TXCR_VDW(16);
+		val |= I2S_CHN_4;
+		goto s2mono_l;
+	}
+
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
 		val |= I2S_TXCR_VDW(8);
@@ -740,6 +747,9 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 		val |= I2S_TXCR_VDW(24);
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
+		val |= I2S_TXCR_VDW(32);
+		break;
+	case SNDRV_PCM_FORMAT_DSD_U32_LE:
 		val |= I2S_TXCR_VDW(32);
 		break;
 	default:
@@ -762,6 +772,8 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
+
+s2mono_l:
 
 	if (i2s_tdm->clk_trcm) {
 		rockchip_i2s_trcm_mode(substream, dai, div_bclk, div_lrck, val);
@@ -1104,7 +1116,7 @@ static int rockchip_i2s_tdm_init_dai(struct rk_i2s_tdm_dev *i2s_tdm)
 	const char *dma_name;
 	u64 formats = (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE |
 		       SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S24_LE |
-		       SNDRV_PCM_FMTBIT_S32_LE);
+		       SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_DSD_U32_LE);
 	struct device_node *node = i2s_tdm->dev->of_node;
 
 	of_property_for_each_string(node, "dma-names", dma_names, dma_name) {
@@ -1355,6 +1367,10 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 	}
 
 //++
+	i2s_tdm->s2mono = 0;
+	i2s_tdm->s2mono =
+		of_property_read_bool(node, "my,s2mono");
+
 	i2s_tdm->mclk_external = 0;
 	i2s_tdm->mclk_external =
 		of_property_read_bool(node, "my,mclk_external");
