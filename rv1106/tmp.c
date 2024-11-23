@@ -5,7 +5,7 @@
 	clock-names = 	"mclk_tx", "mclk_rx", "hclk",
 			"mclk_tx_src", "mclk_rx_src", "mclk_root0", "mclk_root1";
 
-Ниже выписал clk для rv1106, там не так страшно ))), mux и gate, с моей картинкой сравните и имена сопоставить.
+Ниже выписал clk для rv1106, там не так страшно ))), mux и gate, с моей картинкой doc/rk3308-cru.jpg сравните и имена сопоставить.
 
 Вроде для одной сетки должно сработать
     i2s0_mclkin: i2s0_mclkin {
