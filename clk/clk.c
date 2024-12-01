@@ -24,6 +24,7 @@
 
 //GRF
 #define SOC_2_R (0x0308)
+#define CHIP_ID (0x0800)
 
 // I2S
 #define TXCR_R (0x0000)
@@ -45,7 +46,7 @@
 
 int main(void) {
     mmio_t *mmio;
-    uint32_t g10, g11, g13, s52, s54, soc2, gpio2_a4;
+    uint32_t g10, g11, g13, s52, s54, soc2, chip_id, gpio2_a4;
     uint32_t txcr, ckr, clkdiv;
 
     mmio = mmio_new();
@@ -82,10 +83,16 @@ int main(void) {
         fprintf(stderr, "mmio_open(): %s\n", mmio_errmsg(mmio));
         exit(1);
     }
+
         if (mmio_read32(mmio, SOC_2_R, &soc2) < 0) {
             fprintf(stderr, "mmio_read32(): %s\n", mmio_errmsg(mmio));
             exit(1);
         }
+        if (mmio_read32(mmio, CHIP_ID, &chip_id) < 0) {
+            fprintf(stderr, "mmio_read32(): %s\n", mmio_errmsg(mmio));
+            exit(1);
+        }
+
     mmio_close(mmio);
 
     mmio = mmio_new();
@@ -142,6 +149,8 @@ int main(void) {
             BV(ckr,28,3), BV(ckr,0,255)+1, BV(ckr,8,255)+1, BV(clkdiv,0,255), BV(clkdiv,8,255) );
 
     printf("gpio2_a4  %-u\n", BV(gpio2_a4,4,1) );
+
+    printf("chip_id  %-u    0x%-x\n", BV(chip_id,0,65535), BV(chip_id,0,65535) );
 
     return 0;
 }
