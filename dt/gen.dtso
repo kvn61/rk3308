@@ -2,7 +2,7 @@
 /plugin/;
 
 &{/} {
-//    gen22m: gen22m {
+#if 0
     mclk_i2s0_8ch_in: mclk_i2s0_8ch_in {
 	compatible = "fixed-clock";
 	#clock-cells = <0>;
@@ -10,29 +10,38 @@
 	status = "okay";
 	clock-output-names = "mclk_i2s0_8ch_in";
     };
+#endif
 
-#if 0
-    gen24m: gen24m {
+#if 1
+    clk_44: clk_44 {
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
+	clock-frequency = <22579200>;
+	status = "okay";
+    };
+
+    clk_48: clk_48 {
 	compatible = "fixed-clock";
 	#clock-cells = <0>;
 	clock-frequency = <24576000>;
 	status = "okay";
     };
 
-//    mclk_i2s0_2ch_in: mclk_i2s0_2ch_in  {
     mclk_i2s0_8ch_in: mclk_i2s0_8ch_in {
 	compatible = "gpio-mux-clock";
 	#clock-cells = <0>;
-	clocks = <&gen22m>, <&gen24m>;
+	clocks = <&clk_44>, <&clk_48>;
 // uart0_cts
 ////	select-gpios = <&gpio2 RK_PA2 GPIO_ACTIVE_HIGH>;
 // SPDIF_TX
-	select-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_LOW>;
+	select-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+	clock-output-names = "mclk_i2s0_8ch_in";
 	status = "okay";
     };
 #endif
 };
 
+#if 0
 &cru {
 //	assigned-clocks = <&cru SCLK_I2S0_8CH_TX_OUT>;
 //	assigned-clock-parents = <&cru SCLK_I2S0_8CH_TX>;
@@ -46,3 +55,4 @@
 //	assigned-clock-rates = <33868800>;
 //	, <33868800>;
 };
+#endif
