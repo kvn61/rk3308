@@ -8,8 +8,10 @@
 	compatible = "rockchip,rk3308-i2s-tdm";
 	reg = <0x0 0xff300000 0x0 0x1000>;
 	interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
-	clocks = <&cru SCLK_I2S0_8CH_TX>, <&cru SCLK_I2S0_8CH_RX>, <&cru HCLK_I2S0_8CH>, <&cru SCLK_I2S0_8CH_TX_OUT>;
-	clock-names = 	"mclk_tx", "mclk_rx", "hclk", "clock_out";
+	clocks = <&cru SCLK_I2S0_8CH_TX>, <&cru SCLK_I2S0_8CH_RX>, <&cru HCLK_I2S0_8CH>, <&cru SCLK_I2S0_8CH_TX_OUT>,
+		<&mclk_i2s0_8ch_in>, <&clk_44>, <&clk_48>;
+	clock-names = 	"mclk_tx", "mclk_rx", "hclk", "clock_out",
+		"mclk_ext", "clk_44", "clk_48";
 	dmas = <&dmac1 0>, <&dmac1 1>;
 	dma-names = "tx", "rx";
 	resets = <&cru SRST_I2S0_8CH_TX_M>, <&cru SRST_I2S0_8CH_RX_M>;
@@ -39,23 +41,20 @@
 
 //!!! for S0
 	rockchip,i2s-tx-route = <3>,<1>,<2>,<0>;
+	my,s2mono;
 //!!! mclk in
-#if 1 
+#if 1
 	my,mclk_external;
 	assigned-clocks = <&cru SCLK_I2S0_8CH_TX_MUX>, <&cru SCLK_I2S0_8CH_RX_MUX>;
 	assigned-clock-parents = <&mclk_i2s0_8ch_in>, <&mclk_i2s0_8ch_in>;
 #else
 //	my,clk_x = <8>;
-//	my,clk_f = <256>;
-#endif
+	my,clk_f = <512>;
 	my,tx_x = <1>;
 	my,rx_x = <1>;
+#endif
 //!!! mclk in
 
-
-//	rockchip,s2mono;
-
-//	rockchip,trcm-sync-rx-only;
 
 //	fmclk44 = <22579200>;
 //	fmclk48 = <24576000>;
