@@ -1237,6 +1237,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 
 //+++
 		if( i2s_tdm->mclk_external ){
+			mclk = i2s_tdm->mclk_tx;
 			if( i2s_tdm->mclk_ext_mux ) {
 				if( params_rate(params) % 44100 ) {
 					clk_prepare_enable( i2s_tdm->clk_48 );
