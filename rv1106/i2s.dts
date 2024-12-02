@@ -35,4 +35,22 @@
 	my,mclk_external;
 
 	...
-}
+};
+
+...CARD... {
+	compatible = "simple-audio-card";
+	simple-audio-card,name = "...";
+	
+	simple-audio-card,format = "...";
+	
+	simple-audio-card,bitclock-master = <&card_master>;
+	simple-audio-card,frame-master = <&card_master>;
+
+	card_master: simple-audio-card,cpu {
+		sound-dai = <...>;
+	};
+
+	simple-audio-card,codec {
+		sound-dai = <...>;
+	};
+};
