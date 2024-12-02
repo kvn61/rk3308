@@ -1,23 +1,38 @@
     clk_44: clk_44 {
-	    compatible = "fixed-clock";
-	    #clock-cells = <0>;
-    	clock-frequency = <22579200>;
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
     	status = "okay";
+// проверить
+    	clock-frequency = <22579200>;
     };
 
     clk_48: clk_48 {
       	compatible = "fixed-clock";
       	#clock-cells = <0>;
-      	clock-frequency = <24576000>;
       	status = "okay";
+// проверить
+      	clock-frequency = <24576000>;
     };
 
-    mclk_i2s0_8ch_in: mclk_i2s0_8ch_in {
+    i2s0_mclkin: i2s0_mclkin {
       	compatible = "gpio-mux-clock";
       	#clock-cells = <0>;
       	clocks = <&clk_44>, <&clk_48>;
-      	select-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
-      	clock-output-names = "mclk_i2s0_8ch_in";
+      	clock-output-names = "i2s0_mclkin";
       	status = "okay";
+// проверить
+	select-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
     };
 
+
+...I2S... {
+	...
+
+	clocks = <&cru MCLK_I2S0_8CH_TX>, <&cru MCLK_I2S0_8CH_RX>, <&cru HCLK_I2S0>, <&i2s0_mclkin>, <&clk_44>, <&clk_48>;
+	clock-names = "mclk_tx", "mclk_rx", "hclk", "mclk_ext", "clk_44", "clk_48";
+	assigned-clocks = <&cru CLK_I2S0_8CH_TX>, <&cru CLK_I2S0_8CH_RX>;
+	assigned-clock-parents = <&i2s0_mclkin>, <&i2s0_mclkin>;
+	my,mclk_external;
+
+	...
+}
