@@ -82,10 +82,11 @@ struct rk_i2s_tdm_dev {
 	struct clk *mclk_root0;
 	struct clk *mclk_root1;
 //+++
-	struct clk *mclk_mux;
-	struct clk *mclk_44;
-	struct clk *mclk_48;
-	unsigned int mclk_mux_f;
+	bool mclk_external;
+	bool mclk_ext_mux;
+	struct clk *mclk_ext;
+	struct clk *clk_44;
+	struct clk *clk_48;
 //+++
 	struct regmap *regmap;
 	struct regmap *grf;
@@ -1234,9 +1235,25 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 			rockchip_i2s_tdm_calibrate_mclk(i2s_tdm, substream,
 							params_rate(params));
 
-		ret = rockchip_i2s_tdm_set_mclk(i2s_tdm, substream, &mclk);
-		if (ret)
-			goto err;
+//+++
+		if( i2s_tdm->mclk_external ){
+			if( i2s_tdm->mclk_ext_mux ) {
+				if( params_rate(params) % 44100 ) {
+					clk_prepare_enable( i2s_tdm->clk_48 );
+					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
+				}
+				else {
+					clk_prepare_enable( i2s_tdm->clk_44 );
+					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_44);
+				}
+			}
+		}
+		else {
+			ret = rockchip_i2s_tdm_set_mclk(i2s_tdm, substream, &mclk);
+			if (ret)
+				goto err;
+		}
+//+++
 
 		mclk_rate = clk_get_rate(mclk);
 		bclk_rate = i2s_tdm->bclk_fs * params_rate(params);
@@ -2128,15 +2145,26 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 		return PTR_ERR(i2s_tdm->mclk_rx);
 
 //+++
-  i2s_tdm->mclk_mux_f = 0;
-	i2s_tdm->mclk_mux = devm_clk_get(&pdev->dev, "mclk_mux");
-	if (!IS_ERR(i2s_tdm->mclk_mux)) {
-    i2s_tdm->mclk_44 = devm_clk_get(&pdev->dev, "mclk_44");
-    if (!IS_ERR(i2s_tdm->mclk_44)) {
-      i2s_tdm->mclk_48 = devm_clk_get(&pdev->dev, "mclk_48");
-      if (!IS_ERR(i2s_tdm->mclk_48)) i2s_tdm->mclk_mux_f = 1;
-    }
-  }
+	i2s_tdm->mclk_external = 0;
+	i2s_tdm->mclk_external =
+		of_property_read_bool(node, "my,mclk_external");
+
+	if (i2s_tdm->mclk_external) {
+		i2s_tdm->mclk_ext = devm_clk_get(&pdev->dev, "mclk_ext");
+		if (IS_ERR(i2s_tdm->mclk_ext)) {
+			return dev_err_probe(i2s_tdm->dev, PTR_ERR(i2s_tdm->mclk_ext),
+					     "Failed to get clock mclk_ext\n");
+		}
+		else {
+			i2s_tdm->mclk_ext_mux = 0;
+			i2s_tdm->clk_44 = devm_clk_get(&pdev->dev, "clk_44");
+			if (!IS_ERR(i2s_tdm->clk_44)) {
+				i2s_tdm->clk_48 = devm_clk_get(&pdev->dev, "clk_48");
+				if (!IS_ERR(i2s_tdm->clk_48)) i2s_tdm->mclk_ext_mux = 1;
+			}
+		}
+	}
+
 //+++
 
 	i2s_tdm->io_multiplex =
