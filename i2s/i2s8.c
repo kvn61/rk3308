@@ -709,7 +709,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 			}
 
 			else
-				//!!! orig kernel code line
+	//!!! orig kernel code line
 				err = clk_set_rate(mclk, DEFAULT_MCLK_FS * params_rate(params));
 
 			if (err)
@@ -726,13 +726,16 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 //+++
 		if( i2s_tdm->mclk_external ){
 			if( i2s_tdm->mclk_ext_mux ) {
+				//clk_set_rate(i2s_tdm->mclk_ext, DEFAULT_MCLK_FS * params_rate(params));
 				if( params_rate(params) % 44100 ) {
-					clk_prepare_enable( i2s_tdm->clk_48 );
-					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
+					////clk_prepare_enable( i2s_tdm->clk_48 );
+					//clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
+					clk_set_rate( i2s_tdm->mclk_ext, 24576000);
 				}
 				else {
-					clk_prepare_enable( i2s_tdm->clk_44 );
-					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_44);
+					////clk_prepare_enable( i2s_tdm->clk_44 );
+					//clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_44);
+					clk_set_rate( i2s_tdm->mclk_ext, 22579200);
 				}
 			}
 		}
