@@ -67,6 +67,13 @@ struct rk_i2s_tdm_dev {
 	struct clk *clk_44;
 	struct clk *clk_48;
 //+++
+//++-
+	struct clk *clk_out;
+	unsigned int clk_f;
+	unsigned int clk_x;
+	unsigned int tx_x;
+	unsigned int rx_x;
+//++-
 	bool io_multiplex;
 	bool tdm_mode;
 	unsigned int frame_width;
@@ -677,7 +684,10 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 
 //+++
 		if( i2s_tdm->tdm_mode != true ) {
-			if( i2s_tdm->s2mono) {
+			if (i2s_tdm->clk_f == 768) {
+				div_lrck = 24; i2s_tdm->frame_width = 24;
+			}
+			else if( i2s_tdm->s2mono) {
 				div_lrck = 32; i2s_tdm->frame_width = 32;
 			} else {
 				div_lrck = 64; i2s_tdm->frame_width = 64;
@@ -685,16 +695,38 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 		}
 //+++
 
+//++-
 		if( !i2s_tdm->mclk_external ){
-			err = clk_set_rate(mclk, DEFAULT_MCLK_FS * params_rate(params));
+			if (i2s_tdm->clk_x) {
+				unsigned long clk_hz = i2s_tdm->clk_x * i2s_tdm->frame_width * params_rate(params);
+				if ( clk_hz > (1024*44100) ) clk_hz = (1024*44100);
+				err = clk_set_rate( mclk, clk_hz);
+			}
+			else if (i2s_tdm->clk_f) {
+//				err = clk_set_rate(mclk, i2s_tdm->clk_f * 44100);		// test clock
+				err = clk_set_rate(i2s_tdm->mclk_tx, i2s_tdm->clk_f * 44100);		// test clock
+				err = clk_set_rate(i2s_tdm->mclk_rx, i2s_tdm->clk_f * 44100);		// test clock
+			}
+
+			else
+	//!!! orig kernel code line
+				err = clk_set_rate(mclk, DEFAULT_MCLK_FS * params_rate(params));
+
 			if (err)
 				return err;
+
+			err = clk_prepare_enable(i2s_tdm->clk_out);
+			if (err) {
+				return dev_err_probe(i2s_tdm->dev, err,
+						     "Failed to enable clock clk_out\n");
+			}
 		}
+//++-
 
 //+++
 		if( i2s_tdm->mclk_external ){
 			if( i2s_tdm->mclk_ext_mux ) {
-				////clk_set_rate(i2s_tdm->mclk_ext, DEFAULT_MCLK_FS * params_rate(params));
+				//clk_set_rate(i2s_tdm->mclk_ext, DEFAULT_MCLK_FS * params_rate(params));
 				if( params_rate(params) % 44100 ) {
 					////clk_prepare_enable( i2s_tdm->clk_48 );
 					//clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
@@ -791,6 +823,21 @@ s2mono_l:
 				   I2S_RXCR_VDW_MASK | I2S_RXCR_CSR_MASK,
 				   val);
 	}
+
+//++-
+	if(i2s_tdm->tx_x) {
+		//div_bclk /= i2s_tdm->tx_x;
+		regmap_update_bits(i2s_tdm->regmap, I2S_CLKDIV,
+				   I2S_CLKDIV_TXM_MASK,
+				   I2S_CLKDIV_TXM((div_bclk/i2s_tdm->tx_x)));
+	}
+	if(i2s_tdm->rx_x) {
+		//div_bclk /= i2s_tdm->rx_x;
+		regmap_update_bits(i2s_tdm->regmap, I2S_CLKDIV,
+				   I2S_CLKDIV_RXM_MASK,
+				   I2S_CLKDIV_RXM((div_bclk/i2s_tdm->rx_x)));
+	}
+//++-
 
 	return rockchip_i2s_io_multiplex(substream, dai);
 }
@@ -980,6 +1027,10 @@ static const struct regmap_config rockchip_i2s_tdm_regmap_config = {
 
 static int common_soc_init(struct device *dev, u32 addr)
 {
+//+++
+	return 0;
+//+++
+
 	struct rk_i2s_tdm_dev *i2s_tdm = dev_get_drvdata(dev);
 	const struct txrx_config *configs = i2s_tdm->soc_data->configs;
 	u32 reg = 0, val = 0, trcm = i2s_tdm->clk_trcm;
@@ -1368,6 +1419,34 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 			}
 		}
 	}
+
+	if (!i2s_tdm->mclk_external) {
+		i2s_tdm->clk_out = devm_clk_get(&pdev->dev, "clock_out");
+		if (IS_ERR(i2s_tdm->clk_out)) {
+			return dev_err_probe(i2s_tdm->dev, PTR_ERR(i2s_tdm->clk_out),
+					     "Failed to get clock clk_out\n");
+		}
+//++-
+		unsigned int clk_f = 0;
+		i2s_tdm->clk_f = 512;
+		of_property_read_u32(node, "my,clk_f", &clk_f );
+		if ((clk_f == 32) || (clk_f == 64) || (clk_f == 128) || (clk_f == 256) || (clk_f == 512) || (clk_f == 768) || (clk_f == 1024)) i2s_tdm->clk_f = clk_f;
+
+		unsigned int clk_x = 0;
+		of_property_read_u32(node, "my,clk_x", &clk_x );
+		if ((clk_x == 1) || (clk_x == 2) || (clk_x == 4) || (clk_x == 8) || (clk_x == 16) || (clk_x == 32)) i2s_tdm->clk_x = clk_x;
+
+
+		unsigned int tx_x = 0;
+		of_property_read_u32(node, "my,tx_x", &tx_x );
+		if ((tx_x == 1) || (tx_x == 2) || (tx_x == 4) || (tx_x == 8) || (tx_x == 16) || (tx_x == 32)) i2s_tdm->tx_x = tx_x;
+
+		unsigned int rx_x = 0;
+		of_property_read_u32(node, "my,rx_x", &rx_x );
+		if ((rx_x == 1) || (rx_x == 2) || (rx_x == 4) || (rx_x == 8) || (rx_x == 16) || (rx_x == 32)) i2s_tdm->rx_x = rx_x;
+//++-
+	}
+
 //+++
 
 	i2s_tdm->io_multiplex =
