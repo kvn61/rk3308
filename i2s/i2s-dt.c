@@ -32,12 +32,25 @@
 #2 корректно возвращает rate
 #3 (родной код) нестандартная частота, err=-22
 
-И получаем при проигрывании aplay
+При загрузке
+[    0.863385] i2s8d: loading out-of-tree module taints kernel.
+[    0.877346] mycodec_probe: mycodec_probe
+[    0.888959] i2s_tdm_set_sysclk: rockchip_i2s_tdm_set_sysclk
+[    0.898725] rockchip-thermal ff1f0000.tsadc: Missing tshut mode property, using default (cru)
+
+И получаем при проигрывании aplay 44100 или 48000
 [   45.990289] mycodec_hw_params: mycodec_hw_params
 [   45.990814] i2s: rockchip_i2s_tdm_hw_params clk_set_rate_48 err=0
 [   45.991444] i2s: rockchip_i2s_tdm_hw_params clk_get_rate =24576000
 [   45.992059] i2s: rockchip_i2s_tdm_hw_params clk_set_rate err=-22
 [   45.992613] rockchip-i2s-tdm ff300000.i2s: ASoC: error at snd_soc_dai_hw_params on ff300000.i2s: -22
+
+при проигрывании aplay 88200 или 96000 все ОК
+[  218.595768] mycodec_hw_params: mycodec_hw_params
+[  218.596240] i2s: rockchip_i2s_tdm_hw_params clk_set_rate_48 err=0
+[  218.596783] i2s: rockchip_i2s_tdm_hw_params clk_get_rate =24576000
+[  218.597358] i2s: rockchip_i2s_tdm_hw_params clk_set_rate err=0
+[  218.597942] i2s: rockchip_i2s_tdm_hw_params bclk_rate=5644800
 
 Сначала вызов кодек, потом драйвер !
 
