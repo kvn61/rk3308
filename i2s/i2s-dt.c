@@ -45,7 +45,7 @@
 [   45.992059] i2s: rockchip_i2s_tdm_hw_params clk_set_rate err=-22
 [   45.992613] rockchip-i2s-tdm ff300000.i2s: ASoC: error at snd_soc_dai_hw_params on ff300000.i2s: -22
 
-при проигрывании aplay 88200 или 96000 все ОК
+при проигрывании aplay 88200 или 96000 все ОК ( DEFAULT_MCLK_FS=256 * 2 * fs = 512 fs gen rate )
 [  218.595768] mycodec_hw_params: mycodec_hw_params
 [  218.596240] i2s: rockchip_i2s_tdm_hw_params clk_set_rate_48 err=0
 [  218.596783] i2s: rockchip_i2s_tdm_hw_params clk_get_rate =24576000
