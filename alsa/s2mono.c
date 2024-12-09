@@ -7,6 +7,38 @@
 #define DBG(f, ...) if(s2m->fdbg) fprintf(stderr, "%s:%i "f"\n", __FUNCTION__, __LINE__, ## __VA_ARGS__);
 #define INF(f, ...) fprintf(stderr, "%s:%i "f"\n", __FUNCTION__, __LINE__, ## __VA_ARGS__);
 
+#define hi "1"
+#define lo "0"
+
+#define gpio_request( pin ) \
+{ fd = open("/sys/class/gpio/export", O_WRONLY);\
+sprintf(buf, "%d", pin);\
+write(fd, buf, strlen(buf));\
+close(fd); }
+
+#define gpio_free( pin ) \
+{ fd = open("/sys/class/gpio/unexport", O_WRONLY);\
+sprintf(buf, "%d", pin);\
+write(fd, buf, strlen(buf));\
+close(fd); }
+
+#define gpio_set_value( pin, val) \
+{ sprintf(buf, "/sys/class/gpio/gpio%d/value", pin);\
+fd = open(buf, O_WRONLY);\
+write(fd, val, 1);\
+close(fd); }
+
+#define gpio_direction_output( pin, val) \
+{ gpio_request( pin );\
+sprintf(buf, "/sys/class/gpio/gpio%d/direction", pin);\
+fd = open(buf, O_WRONLY);\
+write(fd, "out", 3);\
+close(fd);\
+gpio_set_value( pin, val);}
+
+int fd;
+char buf[64];
+
 static unsigned int sfmt[] = {	SND_PCM_FORMAT_S24_LE, \
 								/*SND_PCM_FORMAT_S32_LE,*/ \
 								SND_PCM_FORMAT_S24_3LE, \
@@ -27,10 +59,8 @@ typedef struct {
 	uint8_t tlval;
 	uint8_t trval;
 	uint8_t step;		// for debug
-	snd_pcm_uframes_t buffer_size, period_size;
-	snd_pcm_uframes_t buffer_time, period_time;
-	uint32_t periods;
-	uint8_t fhw;
+				// PIN numbers = (letter-1)*32+pinnum for NanoPi
+	int dsd;		// 0 - PCM; 1 - DSD
 } s2m_t;
 
 
@@ -172,9 +202,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 	s2m->rval = 0;
 	s2m->tlval = 0;
 	s2m->trval = 0;
-	s2m->buffer_size = 0; s2m->buffer_time = 0; s2m->periods = 0;
-	s2m->period_size = 0; s2m->period_time = 0;
-	s2m->fhw = 1;
+	s2m->dsd = 0;
 
 	snd_config_for_each(i, next, conf) {
 		snd_config_t *n = snd_config_iterator_entry(i);
@@ -213,6 +241,12 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 			goto ok;
 		}
 
+		err = get_int_parm(n, id, "dsd", &s2m->dsd);
+		if (err) {
+			fprintf( stderr, "rval=0x%x\n", s2m->dsd);
+			goto ok;
+		}
+
 		SNDERR("Unknown field %s", id);
 		err = -EINVAL;
 	ok:
@@ -224,6 +258,11 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 		err = -EINVAL;
 		goto lerr;
 	}
+
+		// !!! check pin numbers  !!!
+		//	gpio_request();
+		if( s2m->dsd ) gpio_direction_output( s2m->dsd, lo);
+		if( err < 0 ) { DBG( "Bad PIN dsd %d", s2m->dsd); err = -EINVAL; goto lerr;}
 
 	s2m->ext.version = SND_PCM_EXTPLUG_VERSION;
 	s2m->ext.name = "2ch to 4ch Plugin";
