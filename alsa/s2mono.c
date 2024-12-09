@@ -161,23 +161,25 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	return size;
 }
 
-/*
+
 static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
 {
 	s2m_t *s2m = (s2m_t *)ext;
-	snd_pcm_t *pcm = s2m->ext.pcm;
-	int ret, hw_set = 0;
+//	snd_pcm_t *pcm = s2m->ext.pcm;
+//	int ret, hw_set = 0;
 
-	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
-			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
+	if( ext->format == SND_PCM_FORMAT_DSD_U32_LE )
+		gpio_set_value( s2m->dsd, hi);
+
+//	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
+//			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
 }
-*/
 
 static const snd_pcm_extplug_callback_t s2m_callback = {
 	.transfer = s2m_transfer,
 	.init = s2m_init,
 	.close = s2m_close,
-//	.hw_params = s2m_hw,
+	.hw_params = s2m_hw,
 };
 
 #include "parm.h"
@@ -258,11 +260,6 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 		err = -EINVAL;
 		goto lerr;
 	}
-
-		// !!! check pin numbers  !!!
-		//	gpio_request();
-		if( s2m->dsd ) gpio_direction_output( s2m->dsd, lo);
-		if( err < 0 ) { DBG( "Bad PIN dsd %d", s2m->dsd); err = -EINVAL; goto lerr;}
 
 	s2m->ext.version = SND_PCM_EXTPLUG_VERSION;
 	s2m->ext.name = "2ch to 4ch Plugin";
