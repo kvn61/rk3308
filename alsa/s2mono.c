@@ -12,35 +12,35 @@
 
 #define gpio_request( pin ) \
 { fd = open("/sys/class/gpio/export", O_WRONLY);\
-sprintf(buf, "%d", pin);\
+sprintf(buf, "%d", (pin) );\
 write(fd, buf, strlen(buf));\
 close(fd); }
 
 #define gpio_free( pin ) \
 { fd = open("/sys/class/gpio/unexport", O_WRONLY);\
-sprintf(buf, "%d", pin);\
+sprintf(buf, "%d", (pin) );\
 write(fd, buf, strlen(buf));\
 close(fd); }
 
 #define gpio_set_value( pin, val) \
-{ sprintf(buf, "/sys/class/gpio/gpio%d/value", pin);\
+{ sprintf(buf, "/sys/class/gpio/gpio%d/value", (pin) );\
 fd = open(buf, O_WRONLY);\
-write(fd, val, 1);\
+write(fd, (val) , 1);\
 close(fd); }
 
 #define gpio_direction_output( pin, val) \
-{ gpio_request( pin );\
-sprintf(buf, "/sys/class/gpio/gpio%d/direction", pin);\
+{ gpio_request( (pin) );\
+sprintf(buf, "/sys/class/gpio/gpio%d/direction", (pin) );\
 fd = open(buf, O_WRONLY);\
 write(fd, "out", 3);\
 close(fd);\
-gpio_set_value( pin, val);}
+gpio_set_value( (pin) , (val) );}
 
 int fd;
 char buf[64];
 
-static unsigned int sfmt[] = {	SND_PCM_FORMAT_S24_LE, \
-								/*SND_PCM_FORMAT_S32_LE,*/ \
+static unsigned int sfmt[] = {	SND_PCM_FORMAT_S16_LE, \
+								SND_PCM_FORMAT_S24_LE, \
 								SND_PCM_FORMAT_S24_3LE, \
 								SND_PCM_FORMAT_DSD_U32_LE, \
 							};
@@ -54,6 +54,7 @@ typedef struct {
 	snd_pcm_extplug_t ext;
 	int fdbg;			// debug flag
 	int f243;			// S24_3LE 
+	int s2mono;			// 0=copy s16-s24
 	uint32_t lval;
 	uint32_t rval;
 	uint8_t tlval;
@@ -75,7 +76,9 @@ static int s2m_init(snd_pcm_extplug_t *ext)
 
 static int s2m_close(snd_pcm_extplug_t *ext)
 {
-//	s2m_t *s2m = (s2m_t *)ext;
+	s2m_t *s2m = (s2m_t *)ext;
+	if( s2m->dsd )
+		gpio_free( s2m->dsd );
 	return 0;
 }
 
@@ -103,24 +106,31 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 {
 	s2m_t *s2m = (s2m_t *)ext;
 	void *ipv = area_addr(src_areas, src_offset);
-	uint8_t istep = 0;
+	void *opv = area_addr(dst_areas, dst_offset);
+	uint8_t istep = 0, ostep = 0;
 	uint64_t *ip;
-	uint64_t *op = area_addr(dst_areas, dst_offset);
+	uint64_t *op;
 	unsigned int count = size;
 	union uframe is;
 	union uframe os;
 	uint32_t lval, rval;
 	uint8_t tlval = s2m->tlval, trval = s2m->trval;
 
-//	if( !(dst_areas->step == biic->cn * biic->wso * 8) || !(src_areas->step == biic->cn * biic->wsi * 8) ) {
-
-	if( src_areas->step == 48 ) istep = 6;
+	if( src_areas->step == 32 ) istep = 4;
+	else if( src_areas->step == 48 ) istep = 6;
 	else if( src_areas->step == 64 ) istep = 8;
 
-//	if( !(dst_areas->step == src_areas->step) || !(dst_areas->step == 64) ) {
-	if( !istep || !(dst_areas->step == 64) ) {
-		s2m->fdbg = 1;
-		DBG( "Error in STEP, istep=%u    ostep=%u\n", src_areas->step, dst_areas->step );
+	if( dst_areas->step == 32 ) ostep = 4;
+	else if( dst_areas->step == 48 ) ostep = 6;
+	else if( dst_areas->step == 64 ) ostep = 8;
+
+	if( ( !istep || !ostep ) ||
+		( istep==4 && ostep!=4 ) ||		// s16 -> s16
+		( istep==6 && ostep!=8 ) ||		// s24_3 -> s24
+		( istep==8 && ostep!=8 ) )		// s24, dsd32
+	{
+		//s2m->fdbg = 1;
+		INF( "Error in STEP, istep=%u    ostep=%u\n", src_areas->step, dst_areas->step );
 //		DBG( "istep=%u ostep=%u ich=%u och=%u r=%u if=%u of=%u", 
 //			src_areas->step, dst_areas->step, ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
 //		my_hw_free( ext );
@@ -128,11 +138,22 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		return -EINVAL;
 	}
 
-//	memcpy(dst, src, count * 8);
+		// s16 copy
+	if( istep == 4 ) {
+		memcpy(opv, ipv, count * 4);
+		return size;
+	}
+
+		// s24 copy
+	if( !s2m->s2mono && ext->format == SND_PCM_FORMAT_S24_LE ) {
+		memcpy(opv, ipv, count * 8);
+		return size;
+	}
 
 	if( tlval ) lval = s2m->lval;
 	if( trval ) rval = s2m->rval;
 
+	op = opv;
 	do {
 
 		ip = ipv; is.f64 = *ip;
@@ -145,11 +166,14 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 			is.f8[3] = 0;
 		}
 
-		os.f16[0] = is.f16[1]; os.f16[1] = is.f16[0];
-		os.f16[2] = is.f16[3]; os.f16[3] = is.f16[2];
+		if( tlval ) is.f32[0] = lval;
+		if( trval ) is.f32[1] = rval;
 
-		if( tlval ) os.f32[0] = lval;
-		if( trval ) os.f32[1] = rval;
+		if( s2m->s2mono ) {
+			os.f16[0] = is.f16[1]; os.f16[1] = is.f16[0];
+			os.f16[2] = is.f16[3]; os.f16[3] = is.f16[2];
+		} else 
+			os.f64 = is.f64;
 
 		*op = os.f64;
 
@@ -168,8 +192,13 @@ static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
 //	snd_pcm_t *pcm = s2m->ext.pcm;
 //	int ret, hw_set = 0;
 
-	if( ext->format == SND_PCM_FORMAT_DSD_U32_LE )
-		gpio_set_value( s2m->dsd, hi);
+	if( s2m->dsd ) {
+		if( ext->format == SND_PCM_FORMAT_DSD_U32_LE ) {
+			gpio_set_value( s2m->dsd, hi);
+		} else {
+			gpio_set_value( s2m->dsd, lo);
+		}
+	}
 
 //	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
 //			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
@@ -245,7 +274,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 
 		err = get_int_parm(n, id, "dsd", &s2m->dsd);
 		if (err) {
-			fprintf( stderr, "rval=0x%x\n", s2m->dsd);
+			fprintf( stderr, "dsd=%d\n", s2m->dsd);
 			goto ok;
 		}
 
@@ -281,12 +310,10 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 	if( s2m->f243 ) {
 		snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 0);
 		snd_pcm_extplug_set_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S24_3LE);
-//		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
 		snd_pcm_extplug_set_slave_param(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, SND_PCM_FORMAT_S24);
-//		snd_pcm_extplug_set_slave_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
 	} else {
 		snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 1);
-		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(ofmt), ofmt);
+		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
 	}
 
 //	snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
