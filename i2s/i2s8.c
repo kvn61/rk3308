@@ -677,7 +677,9 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 
 //+++
 		if( i2s_tdm->tdm_mode != true ) {
-			if( i2s_tdm->s2mono) {
+			if( params_format(params) == SNDRV_PCM_FORMAT_S16_LE ) {
+				div_lrck = 32; i2s_tdm->frame_width = 32;
+			} else if( i2s_tdm->s2mono) {
 				div_lrck = 32; i2s_tdm->frame_width = 32;
 			} else {
 				div_lrck = 64; i2s_tdm->frame_width = 64;
@@ -719,7 +721,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 //+++
-	if( i2s_tdm->s2mono ) {
+	if( i2s_tdm->s2mono && (params_format(params) != SNDRV_PCM_FORMAT_S16_LE) ) {
 		val |= I2S_TXCR_VDW(16);
 		val |= I2S_CHN_4;
 		goto s2mono_l;
