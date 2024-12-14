@@ -696,16 +696,13 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 //+++
 		if( i2s_tdm->mclk_external ){
 			if( i2s_tdm->mclk_ext_mux ) {
-				////clk_set_rate(i2s_tdm->mclk_ext, DEFAULT_MCLK_FS * params_rate(params));
 				if( params_rate(params) % 44100 ) {
-					////clk_prepare_enable( i2s_tdm->clk_48 );
-					//clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
-					clk_set_rate( i2s_tdm->mclk_ext, 24576000);
+					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_48);
+					//clk_set_rate( i2s_tdm->mclk_ext, 24576000);
 				}
 				else {
-					////clk_prepare_enable( i2s_tdm->clk_44 );
-					//clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_44);
-					clk_set_rate( i2s_tdm->mclk_ext, 22579200);
+					clk_set_parent( i2s_tdm->mclk_ext, i2s_tdm->clk_44);
+					//clk_set_rate( i2s_tdm->mclk_ext, 22579200);
 				}
 			}
 		}
@@ -721,6 +718,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 //+++
+	if( params_format(params) == SNDRV_PCM_FORMAT_DSD_U32_LE ) i2s_tdm->s2mono = 1;
 	if( i2s_tdm->s2mono && (params_format(params) != SNDRV_PCM_FORMAT_S16_LE) ) {
 		val |= I2S_TXCR_VDW(16);
 		val |= I2S_CHN_4;
