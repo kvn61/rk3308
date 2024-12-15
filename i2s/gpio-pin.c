@@ -2,6 +2,9 @@
 dsd-gpios = <&gpioX Y GPIO_ACTIVE_HIGH>;
 
 // in code
+#include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
+
 struct gpio_desc *dsd_pin;
 
 probe 
