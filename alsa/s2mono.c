@@ -139,6 +139,8 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		return -EINVAL;
 	}
 
+	s2mono = 0;
+
 		// s16 copy
 	if( istep == 4 ) {
 		memcpy(opv, ipv, count * 4);
