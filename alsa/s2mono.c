@@ -115,7 +115,7 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	union uframe os;
 	uint32_t lval, rval;
 	uint8_t tlval = s2m->tlval, trval = s2m->trval;
-	int s2mono = 0;
+	int s2mono = s2m->s2mono;
 
 	if( src_areas->step == 32 ) istep = 4;
 	else if( src_areas->step == 48 ) istep = 6;
@@ -139,7 +139,6 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		return -EINVAL;
 	}
 
-	s2mono = 0;
 
 		// s16 copy
 	if( istep == 4 ) {
@@ -174,11 +173,11 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		if( tlval ) is.f32[0] = lval;
 		if( trval ) is.f32[1] = rval;
 
-		if( s2mono ) {
+		if( s2mono ) {				// s24 dsd
 			os.f16[0] = is.f16[1]; os.f16[1] = is.f16[0];
 			os.f16[2] = is.f16[3]; os.f16[3] = is.f16[2];
 		} else 
-			os.f64 = is.f64;
+			os.f64 = is.f64;		// copy s24_3 -> s24
 
 		*op = os.f64;
 
@@ -205,7 +204,8 @@ static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
 		}
 	}
 
-	INF( "rate = %u\n", ext->rate );
+	return 0;
+//	INF( "rate = %u\n", ext->rate );
 //	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
 //			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
 }
@@ -234,6 +234,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 
 	s2m->step = 0;
 	s2m->fdbg = 0;
+	s2m->s2mono = 0;
 	s2m->f243 = 0;
 	s2m->lval = 0;
 	s2m->rval = 0;
@@ -255,8 +256,16 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 		}
 
 		err = get_bool_parm(n, id, "debug", &s2m->fdbg);
-		if (err)
+		if (err) {
+			fprintf( stderr, "debug=0x%d\n", s2m->fdbg);
 			goto ok;
+		}
+
+		err = get_bool_parm(n, id, "s2mono", &s2m->s2mono);
+		if (err) {
+			fprintf( stderr, "s2mono=0x%d\n", s2m->s2mono);
+			goto ok;
+		}
 
 		err = get_bool_parm(n, id, "f243", &s2m->f243);
 		if (err) {
