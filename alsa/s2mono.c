@@ -115,6 +115,7 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	union uframe os;
 	uint32_t lval, rval;
 	uint8_t tlval = s2m->tlval, trval = s2m->trval;
+	int s2mono = 0;
 
 	if( src_areas->step == 32 ) istep = 4;
 	else if( src_areas->step == 48 ) istep = 6;
@@ -145,10 +146,12 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	}
 
 		// s24 copy
-	if( !s2m->s2mono && ext->format == SND_PCM_FORMAT_S24_LE ) {
+	if( !s2mono && ext->format == SND_PCM_FORMAT_S24_LE ) {
 		memcpy(opv, ipv, count * 8);
 		return size;
 	}
+
+	if( ext->format == SND_PCM_FORMAT_DSD_U32_LE ) s2mono = 1;
 
 	if( tlval ) lval = s2m->lval;
 	if( trval ) rval = s2m->rval;
@@ -169,7 +172,7 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		if( tlval ) is.f32[0] = lval;
 		if( trval ) is.f32[1] = rval;
 
-		if( s2m->s2mono ) {
+		if( s2mono ) {
 			os.f16[0] = is.f16[1]; os.f16[1] = is.f16[0];
 			os.f16[2] = is.f16[3]; os.f16[3] = is.f16[2];
 		} else 
@@ -180,7 +183,7 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 		ipv += istep;
 		op++;
 
-	} while(count--);
+	} while(--count);
 
 	return size;
 }
@@ -200,6 +203,7 @@ static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
 		}
 	}
 
+	INF( "rate = %u\n", ext->rate );
 //	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
 //			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
 }
