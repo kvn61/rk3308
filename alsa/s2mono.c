@@ -7,46 +7,15 @@
 #define DBG(f, ...) if(s2m->fdbg) fprintf(stderr, "%s:%i "f"\n", __FUNCTION__, __LINE__, ## __VA_ARGS__);
 #define INF(f, ...) fprintf(stderr, "%s:%i "f"\n", __FUNCTION__, __LINE__, ## __VA_ARGS__);
 
-#define hi "1"
-#define lo "0"
-
-#define gpio_request( pin ) \
-{ fd = open("/sys/class/gpio/export", O_WRONLY);\
-sprintf(buf, "%d", (pin) );\
-write(fd, buf, strlen(buf));\
-close(fd); }
-
-#define gpio_free( pin ) \
-{ fd = open("/sys/class/gpio/unexport", O_WRONLY);\
-sprintf(buf, "%d", (pin) );\
-write(fd, buf, strlen(buf));\
-close(fd); }
-
-#define gpio_set_value( pin, val) \
-{ sprintf(buf, "/sys/class/gpio/gpio%d/value", (pin) );\
-fd = open(buf, O_WRONLY);\
-write(fd, (val) , 1);\
-close(fd); }
-
-#define gpio_direction_output( pin, val) \
-{ gpio_request( (pin) );\
-sprintf(buf, "/sys/class/gpio/gpio%d/direction", (pin) );\
-fd = open(buf, O_WRONLY);\
-write(fd, "out", 3);\
-close(fd);\
-gpio_set_value( (pin) , (val) );}
-
-int fd;
-char buf[64];
 
 static unsigned int sfmt[] = {	SND_PCM_FORMAT_S16_LE, \
 								SND_PCM_FORMAT_S24_LE, \
 								SND_PCM_FORMAT_S24_3LE, \
 								SND_PCM_FORMAT_DSD_U32_LE, \
 							};
-static unsigned int ofmt[] = {	SND_PCM_FORMAT_S24_LE, \
-								/*SND_PCM_FORMAT_S32_LE,*/ \
-								/*SND_PCM_FORMAT_S24_3LE,*/ \
+static unsigned int ofmt[] = {	SND_PCM_FORMAT_S16_LE, \
+								SND_PCM_FORMAT_S24_LE, \
+								SND_PCM_FORMAT_S24_LE, \
 								SND_PCM_FORMAT_DSD_U32_LE, \
 							};
 
@@ -64,23 +33,6 @@ typedef struct {
 	int dsd;		// 0 - PCM; 1 - DSD
 } s2m_t;
 
-
-static int s2m_init(snd_pcm_extplug_t *ext)
-{
-//	s2m_t *s2m = (s2m_t *)ext;
-	
-	fprintf( stderr, "Init" );
-
-	return 0;
-}
-
-static int s2m_close(snd_pcm_extplug_t *ext)
-{
-	s2m_t *s2m = (s2m_t *)ext;
-	if( s2m->dsd )
-		gpio_free( s2m->dsd );
-	return 0;
-}
 
 static inline void *area_addr(const snd_pcm_channel_area_t *area,
 			      snd_pcm_uframes_t offset)
@@ -132,24 +84,22 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	{
 		//s2m->fdbg = 1;
 		INF( "Error in STEP, istep=%u    ostep=%u\n", src_areas->step, dst_areas->step );
-//		DBG( "istep=%u ostep=%u ich=%u och=%u r=%u if=%u of=%u", 
-//			src_areas->step, dst_areas->step, ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
-//		my_hw_free( ext );
-//		s2m_close( ext );
 		return -EINVAL;
 	}
 
 
-		// s16 copy
-	if( istep == 4 ) {
-		memcpy(opv, ipv, count * 4);
-		return size;
-	}
+	if( !(tlval || trval) ) {
+			// s16 copy
+		if( istep == 4 ) {
+			memcpy(opv, ipv, count * 4);
+			return size;
+		}
 
-		// s24 copy
-	if( !s2mono && ext->format == SND_PCM_FORMAT_S24_LE ) {
-		memcpy(opv, ipv, count * 8);
-		return size;
+			// s24 copy
+		if( !s2mono && ext->format == SND_PCM_FORMAT_S24_LE ) {
+			memcpy(opv, ipv, count * 8);
+			return size;
+		}
 	}
 
 	if( ext->format == SND_PCM_FORMAT_DSD_U32_LE ) s2mono = 1;
@@ -189,32 +139,8 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	return size;
 }
 
-
-static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
-{
-	s2m_t *s2m = (s2m_t *)ext;
-//	snd_pcm_t *pcm = s2m->ext.pcm;
-//	int ret, hw_set = 0;
-
-	if( s2m->dsd ) {
-		if( ext->format == SND_PCM_FORMAT_DSD_U32_LE ) {
-			gpio_set_value( s2m->dsd, hi);
-		} else {
-			gpio_set_value( s2m->dsd, lo);
-		}
-	}
-
-	return 0;
-//	INF( "rate = %u\n", ext->rate );
-//	fprintf( stderr, "0 ich=%u och=%u r=%u if=%u of=%u\n", 
-//			ext->channels, ext->slave_channels, ext->rate, ext->format, ext->slave_format );
-}
-
 static const snd_pcm_extplug_callback_t s2m_callback = {
 	.transfer = s2m_transfer,
-	.init = s2m_init,
-	.close = s2m_close,
-	.hw_params = s2m_hw,
 };
 
 #include "parm.h"
@@ -287,12 +213,6 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 			goto ok;
 		}
 
-		err = get_int_parm(n, id, "dsd", &s2m->dsd);
-		if (err) {
-			fprintf( stderr, "dsd=%d\n", s2m->dsd);
-			goto ok;
-		}
-
 		SNDERR("Unknown field %s", id);
 		err = -EINVAL;
 	ok:
@@ -329,6 +249,9 @@ SND_PCM_PLUGIN_DEFINE_FUNC(s2mono)
 	} else {
 		snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 1);
 		snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
+		//snd_pcm_extplug_set_param_link(&s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, 0);
+		//snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
+		//snd_pcm_extplug_set_slave_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(ofmt), ofmt);
 	}
 
 //	snd_pcm_extplug_set_param_list( &s2m->ext, SND_PCM_EXTPLUG_HW_FORMAT, ARRAY_SIZE(sfmt), sfmt);
