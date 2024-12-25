@@ -676,7 +676,7 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 			hclk_pp = clk_get_parent(hclk_p);
 			if (!IS_ERR( hclk_pp )) {
 				clk_set_parent( hclk_pp, i2s_tdm->hclk_root );
-				clk_set_rate ( i2s_tdm->hclk, 44100*4096 );
+				clk_set_rate ( i2s_tdm->hclk, 44100*4096 );		// default 48000*2048 from pll0
 			}
 		}
 	}
