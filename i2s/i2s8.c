@@ -60,6 +60,9 @@ struct rk_i2s_tdm_dev {
 	const struct rk_i2s_soc_data *soc_data;
 	bool is_master_mode;
 //+++
+	//+++c
+	struct clk *hclk_root;
+	//+++c
 	bool mclk_external;
 	bool mclk_ext_mux;
 	bool s2mono;
@@ -662,6 +665,23 @@ static int rockchip_i2s_tdm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int mclk_rate, bclk_rate, div_bclk = 4, div_lrck = 64;
 	int err;
 	bool s2mono = i2s_tdm->s2mono;
+
+	struct clk *hclk_p;
+	struct clk *hclk_pp;
+
+//+++c
+	if (!IS_ERR(i2s_tdm->hclk_root)) {
+		hclk_p = clk_get_parent(i2s_tdm->hclk);
+		if (!IS_ERR( hclk_p )) {
+			hclk_pp = clk_get_parent(hclk_p);
+			if (!IS_ERR( hclk_pp )) {
+				clk_set_parent( hclk_pp, i2s_tdm->hclk_root );
+				clk_set_rate ( i2s_tdm->hclk, 44100*4096 );
+			}
+		}
+	}
+//+++c
+
 
 	if (i2s_tdm->is_master_mode) {
 		struct clk *mclk;
@@ -1347,6 +1367,10 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 	}
 
 //+++
+	//+++c
+	i2s_tdm->hclk_root = devm_clk_get(&pdev->dev, "hclk_root");
+	//+++c
+
 	i2s_tdm->s2mono = 0;
 	i2s_tdm->s2mono =
 		of_property_read_bool(node, "my,s2mono");
