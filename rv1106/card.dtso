@@ -1,0 +1,48 @@
+/dts-v1/;
+/plugin/;
+
+
+&{/} {
+
+    mycodec: mycodec {
+	compatible = "my,mycodec";
+	#sound-dai-cells = <0>;
+	playback = <8>;
+	capture = <2>;
+	status = "okay";
+    };
+
+    i2s80:sound {
+	compatible = "simple-audio-card";
+	simple-audio-card,name = "i2s80";
+
+#if 1
+	    // DF
+	simple-audio-card,frame-inversion;
+//	simple-audio-card,bitclock-inversion;
+	simple-audio-card,format = "left_j";
+#else
+	    //work only in 32 bit frame
+	    // 2 mono
+	simple-audio-card,format = "right_j";
+#endif
+
+//	simple-audio-card,format = "dsp_b";
+
+//	simple-audio-card,mclk-fs = <256>;
+
+        simple-audio-card,bitclock-master = <&card_master>;
+        simple-audio-card,frame-master = <&card_master>;
+
+        card_master: simple-audio-card,cpu {
+            sound-dai = <&i2s_8ch_0>;
+	    #sound-dai-cells = <0>;
+//	    bitclock-inversion;
+        };
+
+        simple-audio-card,codec {
+            sound-dai = <&mycodec>;
+        };
+    };
+};
+
