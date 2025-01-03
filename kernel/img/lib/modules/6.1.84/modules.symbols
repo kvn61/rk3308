@@ -1,0 +1,24 @@
+# Aliases for symbols, used by symbol_request().
+alias symbol:fat_build_inode fat
+alias symbol:fat_dir_empty fat
+alias symbol:fat_free_clusters fat
+alias symbol:fat_detach fat
+alias symbol:fat_getattr fat
+alias symbol:fat_flush_inodes fat
+alias symbol:fat_search_long fat
+alias symbol:fat_sync_inode fat
+alias symbol:devm_snd_dmaengine_trcm_register snd_soc_rockchip_trcm
+alias symbol:fat_time_unix2fat fat
+alias symbol:fat_attach fat
+alias symbol:fat_get_dotdot_entry fat
+alias symbol:fat_fill_super fat
+alias symbol:fat_truncate_time fat
+alias symbol:fat_time_fat2unix fat
+alias symbol:fat_setattr fat
+alias symbol:dmaengine_trcm_dma_guard_ctrl snd_soc_rockchip_trcm
+alias symbol:fat_scan fat
+alias symbol:fat_add_entries fat
+alias symbol:__fat_fs_error fat
+alias symbol:fat_alloc_new_dir fat
+alias symbol:fat_remove_entries fat
+alias symbol:fat_update_time fat

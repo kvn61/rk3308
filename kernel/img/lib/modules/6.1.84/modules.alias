@@ -1,0 +1,21 @@
+# Aliases extracted from modules themselves.
+alias fs-vfat vfat
+alias fs-ntfs ntfs
+alias platform:rockchip-i2s-tdm snd_soc_rockchip_i2s_tdm
+alias of:N*T*Crockchip,rk3308-i2s-tdmC* snd_soc_rockchip_i2s_tdm
+alias of:N*T*Crockchip,rk3308-i2s-tdm snd_soc_rockchip_i2s_tdm
+alias platform:rockchip-i2s-tdm i2s8
+alias of:N*T*Crockchip,rv1126-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,rv1126-i2s-tdm i2s8
+alias of:N*T*Crockchip,rk3588-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,rk3588-i2s-tdm i2s8
+alias of:N*T*Crockchip,rk3568-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,rk3568-i2s-tdm i2s8
+alias of:N*T*Crockchip,rk3308-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,rk3308-i2s-tdm i2s8
+alias of:N*T*Crockchip,rk1808-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,rk1808-i2s-tdm i2s8
+alias of:N*T*Crockchip,px30-i2s-tdmC* i2s8
+alias of:N*T*Crockchip,px30-i2s-tdm i2s8
+alias of:N*T*Cmy,mycodecC* mycodec
+alias of:N*T*Cmy,mycodec mycodec
