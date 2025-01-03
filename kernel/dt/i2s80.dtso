@@ -1,0 +1,42 @@
+/dts-v1/;
+/plugin/;
+
+&i2s_8ch_0 {
+	#sound-dai-cells = <0>;
+
+	clocks = <&cru SCLK_I2S0_8CH_TX>, <&cru SCLK_I2S0_8CH_RX>, <&cru HCLK_I2S0_8CH>, <&cru SCLK_I2S0_8CH_TX_OUT>,
+		<&mclk_i2s0_8ch_in>, <&clk_44>, <&clk_48>, <&cru PLL_VPLL1>;
+	clock-names = 	"mclk_tx", "mclk_rx", "hclk", "clock_out",
+		"mclk_ext", "clk_44", "clk_48", "hclk_root";
+
+	status = "okay";
+
+//	rockchip,trcm-sync-rx-only;
+
+//!!! for S0
+	rockchip,i2s-tx-route = <3>,<1>,<2>,<0>;
+	my,s2mono;
+
+//	my,hclk_root_f;
+//	my,hclk_root_x = <2048>;
+
+//	my,dma_bytes = <4>;
+//	my,dma_burst = <4>;
+
+//!!! mclk in
+#if 0
+	my,mclk_external;
+	assigned-clocks = <&cru SCLK_I2S0_8CH_TX_MUX>, <&cru SCLK_I2S0_8CH_RX_MUX>;
+	assigned-clock-parents = <&mclk_i2s0_8ch_in>, <&mclk_i2s0_8ch_in>;
+#else
+//	my,clk_x = <8>;
+	my,clk_f = <512>;
+	my,tx_x = <1>;
+	my,rx_x = <1>;
+	assigned-clocks = <&cru SCLK_I2S0_8CH_RX>;
+	assigned-clock-parents = <&cru SCLK_I2S0_8CH_TX_MUX>;
+#endif
+//!!! mclk in
+
+};
+
