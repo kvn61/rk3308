@@ -1,7 +1,12 @@
 kernel/fs/fat/fat.ko:
 kernel/fs/fat/vfat.ko: kernel/fs/fat/fat.ko
+kernel/fs/smb/common/cifs_arc4.ko:
+kernel/fs/smb/common/cifs_md4.ko:
+kernel/fs/smb/client/cifs.ko: kernel/fs/smb/common/cifs_arc4.ko kernel/net/dns_resolver/dns_resolver.ko kernel/fs/smb/common/cifs_md4.ko
 kernel/fs/ntfs/ntfs.ko:
+kernel/crypto/md5.ko:
 kernel/sound/soc/rockchip/snd-soc-rockchip-i2s-tdm.ko: kernel/sound/soc/rockchip/snd-soc-rockchip-trcm.ko
 kernel/sound/soc/rockchip/snd-soc-rockchip-trcm.ko:
+kernel/net/dns_resolver/dns_resolver.ko:
 extra/i2s8.ko:
 extra/mycodec.ko:

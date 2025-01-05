@@ -1,6 +1,11 @@
 # Aliases extracted from modules themselves.
 alias fs-vfat vfat
+alias smb3 cifs
+alias fs-smb3 cifs
+alias fs-cifs cifs
 alias fs-ntfs ntfs
+alias crypto-md5 md5
+alias md5 md5
 alias platform:rockchip-i2s-tdm snd_soc_rockchip_i2s_tdm
 alias of:N*T*Crockchip,rk3308-i2s-tdmC* snd_soc_rockchip_i2s_tdm
 alias of:N*T*Crockchip,rk3308-i2s-tdm snd_soc_rockchip_i2s_tdm
