@@ -868,7 +868,7 @@ static int rockchip_i2s_tdm_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-#define RKERNEL 1
+#define RKERNEL 0
 
 static int rockchip_i2s_tdm_dai_probe(struct snd_soc_dai *dai)
 {
@@ -1465,6 +1465,26 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 				if (!IS_ERR(i2s_tdm->clk_48)) i2s_tdm->mclk_ext_mux = 1;
 			}
 		}
+
+		/* CRU_CLKGATE_CON13 bits 4 & 5 =1 disable output TX & RX to MCLK pad
+			cru_base = 0xff500000   reg = 0x0334
+			0x300030 = (1<<4) | (1<<5) | (1<<(4+16)) | (1<<(5+16))
+		*/
+		void __iomem *gate13;
+		gate13 = ioremap( (resource_size_t) 0xff500000 + 0x0334, 32);
+		writel( 0x300030, gate13);
+		iounmap( gate13 );
+		/* 111111
+			//require cru "compatible = syscon"
+		struct regmap *cru;
+		cru = syscon_regmap_lookup_by_phandle(node, "rockchip,cru");
+		if ( !IS_ERR_OR_NULL(cru) ) {
+				regmap_write( cru, 0x0334, 0x300030);
+				DBGOUT("i2s_tdm: %s    gate13\n", __func__);
+		} else {
+			DBGOUT("i2s_tdm: %s    Bad CRU\n", __func__);
+		}
+		1111111*/
 	}
 //+++
 
