@@ -868,8 +868,6 @@ static int rockchip_i2s_tdm_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-#define RKERNEL 0
-
 static int rockchip_i2s_tdm_dai_probe(struct snd_soc_dai *dai)
 {
 	struct rk_i2s_tdm_dev *i2s_tdm = snd_soc_dai_get_drvdata(dai);
@@ -878,17 +876,10 @@ static int rockchip_i2s_tdm_dai_probe(struct snd_soc_dai *dai)
 		DBGOUT("i2s_tdm: %s   dcount = %u\n", __func__, i2s_tdm->dcount++);
 //+++
 
-//+++
-#if RKERNEL
-	dai->capture_dma_data = &i2s_tdm->capture_dma_data;
-	dai->playback_dma_data = &i2s_tdm->playback_dma_data;
-#else
 	if (i2s_tdm->has_capture)
 		snd_soc_dai_dma_data_set_capture(dai,  &i2s_tdm->capture_dma_data);
 	if (i2s_tdm->has_playback)
 		snd_soc_dai_dma_data_set_playback(dai, &i2s_tdm->playback_dma_data);
-#endif
-//+++
 
 	return 0;
 }
@@ -935,11 +926,7 @@ static int rockchip_i2s_tdm_set_bclk_ratio(struct snd_soc_dai *dai,
 }
 
 static const struct snd_soc_dai_ops rockchip_i2s_tdm_dai_ops = {
-//+++
-#if !RKERNEL
 	.probe = rockchip_i2s_tdm_dai_probe,
-#endif
-//+++
 	.hw_params = rockchip_i2s_tdm_hw_params,
 	.set_bclk_ratio	= rockchip_i2s_tdm_set_bclk_ratio,
 	.set_fmt = rockchip_i2s_tdm_set_fmt,
@@ -1174,22 +1161,13 @@ static int rockchip_i2s_tdm_init_dai(struct rk_i2s_tdm_dev *i2s_tdm)
 	if (!dai)
 		return -ENOMEM;
 
-//+++
-#if RKERNEL
-	dai->probe = rockchip_i2s_tdm_dai_probe;
-#endif
-//+++
 	if (i2s_tdm->has_playback) {
 		dai->playback.stream_name  = "Playback";
 		dai->playback.channels_min = 2;
 		dai->playback.channels_max = 8;
-//+++
-#if RKERNEL
-		dai->playback.rates = SNDRV_PCM_RATE_KNOT;
-#else
+//---		dai->playback.rates = SNDRV_PCM_RATE_8000_192000;
+//---		dai->playback.rates = SNDRV_PCM_RATE_8000_384000;
 		dai->playback.rates = SNDRV_PCM_RATE_8000_768000;
-#endif
-//+++
 		dai->playback.formats = formats;
 	}
 
@@ -1197,13 +1175,10 @@ static int rockchip_i2s_tdm_init_dai(struct rk_i2s_tdm_dev *i2s_tdm)
 		dai->capture.stream_name  = "Capture";
 		dai->capture.channels_min = 2;
 		dai->capture.channels_max = 8;
-//+++
-#if RKERNEL
-		dai->capture.rates = SNDRV_PCM_RATE_KNOT;
-#else
+//---		dai->capture.rates = SNDRV_PCM_RATE_8000_192000;
 		dai->capture.rates = SNDRV_PCM_RATE_8000_768000;
-#endif
-//+++
+//---		dai->capture.rates = SNDRV_PCM_RATE_8000_384000;
+//---		dai->capture.rates = SNDRV_PCM_RATE_KNOT;
 		dai->capture.formats = formats;
 	}
 
@@ -1465,26 +1440,6 @@ static int rockchip_i2s_tdm_probe(struct platform_device *pdev)
 				if (!IS_ERR(i2s_tdm->clk_48)) i2s_tdm->mclk_ext_mux = 1;
 			}
 		}
-
-		/* CRU_CLKGATE_CON13 bits 4 & 5 =1 disable output TX & RX to MCLK pad
-			cru_base = 0xff500000   reg = 0x0334
-			0x300030 = (1<<4) | (1<<5) | (1<<(4+16)) | (1<<(5+16))
-		*/
-		void __iomem *gate13;
-		gate13 = ioremap( (resource_size_t) 0xff500000 + 0x0334, 32);
-		writel( 0x300030, gate13);
-		iounmap( gate13 );
-		/* 111111
-			//require cru "compatible = syscon"
-		struct regmap *cru;
-		cru = syscon_regmap_lookup_by_phandle(node, "rockchip,cru");
-		if ( !IS_ERR_OR_NULL(cru) ) {
-				regmap_write( cru, 0x0334, 0x300030);
-				DBGOUT("i2s_tdm: %s    gate13\n", __func__);
-		} else {
-			DBGOUT("i2s_tdm: %s    Bad CRU\n", __func__);
-		}
-		1111111*/
 	}
 //+++
 
