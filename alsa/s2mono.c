@@ -139,8 +139,24 @@ s2m_transfer(snd_pcm_extplug_t *ext,
 	return size;
 }
 
+//test
+static int s2m_hw(snd_pcm_extplug_t *ext, snd_pcm_hw_params_t *params)
+{
+	snd_pcm_format_t format;
+	int err = 0;
+
+	err = snd_pcm_hw_params_get_format(params, &format);
+	fprintf( stderr, "err=%d  format=%u\n", err, format);
+
+	return -EINVAL;
+}
+//test
+
 static const snd_pcm_extplug_callback_t s2m_callback = {
 	.transfer = s2m_transfer,
+//test
+	.hw_params = s2m_hw,
+//test
 };
 
 #include "parm.h"
